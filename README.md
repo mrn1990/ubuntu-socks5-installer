@@ -24,7 +24,7 @@
 ابتدا عبارت `YOUR_GITHUB_USERNAME` را با نام کاربری GitHub خود جایگزین کنید:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/ubuntu-socks5-installer/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/mrn1990/ubuntu-socks5-installer/main/install.sh | sudo bash
 ```
 
 اسکریپت ورودی‌های تعاملی را از `/dev/tty` می‌خواند؛ در نتیجه با وجود استفاده
