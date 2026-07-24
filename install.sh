@@ -116,18 +116,8 @@ select_password() {
     local first second
 
     while true; do
-        read -r -s -p "Enter SOCKS5 password (minimum 12 safe URL characters): " first < "$TTY"
+        read -r -s -p "Enter SOCKS5 password: " first < "$TTY"
         printf '\n' > "$TTY"
-
-        if (( ${#first} < 12 )); then
-            warn "Password must contain at least 12 characters."
-            continue
-        fi
-
-        if [[ ! "$first" =~ ^[A-Za-z0-9._~-]+$ ]]; then
-            warn "Allowed characters: A-Z a-z 0-9 . _ ~ -"
-            continue
-        fi
 
         read -r -s -p "Confirm password: " second < "$TTY"
         printf '\n' > "$TTY"
@@ -140,6 +130,26 @@ select_password() {
         SOCKS_PASSWORD="$first"
         return
     done
+}
+
+url_encode() {
+    local LC_ALL=C
+    local value="$1" encoded="" character index
+
+    for (( index = 0; index < ${#value}; index++ )); do
+        character="${value:index:1}"
+        case "$character" in
+            [A-Za-z0-9.~_-])
+                encoded+="$character"
+                ;;
+            *)
+                printf -v character '%%%02X' "'$character"
+                encoded+="$character"
+                ;;
+        esac
+    done
+
+    printf '%s' "$encoded"
 }
 
 select_port
@@ -303,8 +313,10 @@ if [[ -z "$PUBLIC_IP" ]]; then
         PUBLIC_IP < "$TTY"
 fi
 
-SOCKS5_URL="socks5://${SOCKS_USER}:${SOCKS_PASSWORD}@${PUBLIC_IP}:${SOCKS_PORT}"
-SOCKS5H_URL="socks5h://${SOCKS_USER}:${SOCKS_PASSWORD}@${PUBLIC_IP}:${SOCKS_PORT}"
+ENCODED_SOCKS_USER="$(url_encode "$SOCKS_USER")"
+ENCODED_SOCKS_PASSWORD="$(url_encode "$SOCKS_PASSWORD")"
+SOCKS5_URL="socks5://${ENCODED_SOCKS_USER}:${ENCODED_SOCKS_PASSWORD}@${PUBLIC_IP}:${SOCKS_PORT}"
+SOCKS5H_URL="socks5h://${ENCODED_SOCKS_USER}:${ENCODED_SOCKS_PASSWORD}@${PUBLIC_IP}:${SOCKS_PORT}"
 
 cat > "$CREDENTIALS_FILE" <<EOF_CREDS
 SOCKS_HOST=${PUBLIC_IP}
@@ -331,11 +343,7 @@ printf '\nSOCKS5 URL:\n%s\n' "$SOCKS5_URL"
 printf '\nSOCKS5 URL with remote DNS:\n%s\n' "$SOCKS5H_URL"
 printf '\nTest from another computer:\n'
 
-printf "curl --proxy 'socks5h://%s:%s' --proxy-user '%s:%s' https://api.ipify.org\n" \
-    "$PUBLIC_IP" \
-    "$SOCKS_PORT" \
-    "$SOCKS_USER" \
-    "$SOCKS_PASSWORD"
+printf "curl --proxy '%s' https://api.ipify.org\n" "$SOCKS5H_URL"
 
 printf '\n%s\n' "$FIREWALL_MESSAGE"
 printf 'Credentials file: %s\n' "$CREDENTIALS_FILE"
